@@ -8,6 +8,7 @@ import NutritionSection from '@/components/today/NutritionSection'
 import FitnessSection from '@/components/today/FitnessSection'
 import ScoreHeader from '@/components/today/ScoreHeader'
 import QuickAdd from '@/components/today/QuickAdd'
+import ReviewGate from '@/components/ui/ReviewGate'
 
 function getGreeting() {
   const hour = new Date().getHours()
