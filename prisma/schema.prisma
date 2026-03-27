@@ -1,0 +1,239 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id                   String    @id @default(cuid())
+  email                String    @unique
+  name                 String?
+  avatarUrl            String?
+  role                 String?
+
+  // Subscription
+  plan                 String    @default("free")
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
+
+  // Day settings
+  dayStartTime         String    @default("08:00")
+  dayEndTime           String    @default("18:00")
+  workingDays          String[]  @default(["mon", "tue", "wed", "thu", "fri"])
+  timezone             String    @default("UTC")
+  theme                String    @default("dark")
+
+  // Enabled modules
+  moduleTasks          Boolean   @default(true)
+  modulePipelines      Boolean   @default(false)
+  moduleCalendar       Boolean   @default(false)
+  moduleEmailDrafts    Boolean   @default(false)
+  moduleNutrition      Boolean   @default(false)
+  moduleFitness        Boolean   @default(false)
+
+  // Nutrition goals
+  calorieTarget        Int?
+  trackMacros          Boolean   @default(false)
+  proteinTarget        Int?
+  carbsTarget          Int?
+  fatTarget            Int?
+
+  // Fitness goals
+  fitnessGoalDays      Int?
+  fitnessType          String?
+
+  // Nudge settings
+  nudgeModules         String[]  @default([])
+  nudgeTimes           Json?
+  nudgeLevel           String    @default("normal")
+  quietHoursStart      String?
+  quietHoursEnd        String?
+
+  // Accountability
+  currentStreak        Int       @default(0)
+  longestStreak        Int       @default(0)
+  lastReviewDate       DateTime?
+  streakThreshold      Int       @default(80)
+
+  // Onboarding
+  onboardingComplete   Boolean   @default(false)
+
+  // Relations
+  tasks            Task[]
+  categories       Category[]
+  pipelines        Pipeline[]
+  meetings         Meeting[]
+  emailDrafts      EmailDraft[]
+  nutritionEntries NutritionEntry[]
+  fitnessEntries   FitnessEntry[]
+  dailyScores      DailyScore[]
+  foodHistory      FoodHistoryItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Category {
+  id     String @id @default(cuid())
+  name   String
+  colour String
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tasks  Task[]
+
+  createdAt DateTime @default(now())
+}
+
+model Task {
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  dueDate     DateTime?
+  dueTime     String?
+  completed   Boolean   @default(false)
+  completedAt DateTime?
+  recurring   String?
+  priority    Int       @default(2)
+
+  categoryId     String?
+  category       Category?     @relation(fields: [categoryId], references: [id])
+  pipelineItemId String?
+  pipelineItem   PipelineItem? @relation(fields: [pipelineItemId], references: [id])
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Pipeline {
+  id     String         @id @default(cuid())
+  name   String
+  stages Json
+  userId String
+  user   User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items  PipelineItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model PipelineItem {
+  id             String    @id @default(cuid())
+  name           String
+  stageId        String
+  contactName    String?
+  contactEmail   String?
+  contactPhone   String?
+  value          Float?
+  notes          String?
+  lastContact    DateTime?
+  nextAction     String?
+  nextActionDate DateTime?
+
+  pipelineId String
+  pipeline   Pipeline @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+  tasks      Task[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Meeting {
+  id       String   @id @default(cuid())
+  title    String
+  date     DateTime
+  time     String
+  duration Int?
+  location String?
+  notes    String?
+  userId   String
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+}
+
+model EmailDraft {
+  id             String @id @default(cuid())
+  to             String
+  subject        String
+  body           String
+  status         String @default("draft")
+  pipelineItemId String?
+  userId         String
+  user           User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model NutritionEntry {
+  id           String   @id @default(cuid())
+  date         DateTime @default(now())
+  meal         String
+  food         String
+  calories     Int
+  protein      Float?
+  carbs        Float?
+  fat          Float?
+  imageUrl     String?
+  isAiEstimate Boolean  @default(false)
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+}
+
+model FoodHistoryItem {
+  id          String  @id @default(cuid())
+  food        String
+  label       String
+  calories    Int
+  protein     Float?
+  carbs       Float?
+  fat         Float?
+  useCount    Int     @default(1)
+  isFavourite Boolean @default(false)
+  userId      String
+  user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, food])
+}
+
+model FitnessEntry {
+  id          String   @id @default(cuid())
+  date        DateTime @default(now())
+  completed   Boolean  @default(true)
+  type        String?
+  description String?
+  parsedData  Json?
+  duration    Int?
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+}
+
+model DailyScore {
+  id              String   @id @default(cuid())
+  date            DateTime
+  totalItems      Int
+  completedItems  Int
+  score           Int
+  reviewCompleted Boolean  @default(false)
+  isRestDay       Boolean  @default(false)
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, date])
+}
